@@ -77,17 +77,17 @@ import com.google.samples.apps.nowinandroid.navigation.TopLevelDestination
 import kotlin.reflect.KClass
 import com.google.samples.apps.nowinandroid.feature.settings.R as settingsR
 
-@Composable
-fun NiaApp(
+@Composable//任何用 @Composable 注解的函数都可以作为 UI 组件,它们描述了 UI 的外观和行为 Composable 函数可以相互嵌套，形成 UI 树
+fun NiaApp(//这是一个包装函数，主要负责处理全局的背景、离线状态提示，并管理设置对话框的显示状态
     appState: NiaAppState,
-    modifier: Modifier = Modifier,
+    modifier: Modifier = Modifier,//几乎所有 Compose UI 组件都会接受一个 Modifier 参数
     windowAdaptiveInfo: WindowAdaptiveInfo = currentWindowAdaptiveInfo(),
 ) {
-    val shouldShowGradientBackground =
+    val shouldShowGradientBackground =//声明只读变量（不可重新赋值）
         appState.currentTopLevelDestination == TopLevelDestination.FOR_YOU
-    var showSettingsDialog by rememberSaveable { mutableStateOf(false) }
-
-    NiaBackground(modifier = modifier) {
+    var showSettingsDialog by rememberSaveable { mutableStateOf(false) }//声明可变变量（可以重新赋值） rememberSaveable类似于 remember，但它会在屏幕旋转、进程终止等情况下保留状态。它内部使用了 SavedStateHandle
+                        //：by关键字 (属性委托)这是一种 Kotlin 的高级特性，允许将属性的 getter 和 setter 逻辑委托给另一个对象。在 Compose 中，它简化了状态管理
+    NiaBackground(modifier = modifier) {//NiaBackground 和 NiaGradientBackground用于统一应用程序的背景样式。它们可能封装了 Surface 或其他基础 Composable 来应用颜色或渐变
         NiaGradientBackground(
             gradientColors = if (shouldShowGradientBackground) {
                 LocalGradientColors.current
@@ -95,12 +95,16 @@ fun NiaApp(
                 GradientColors()
             },
         ) {
-            val snackbarHostState = remember { SnackbarHostState() }
+            val snackbarHostState = remember { SnackbarHostState() }//状态管理 (State Management):在 Composable 函数重组时保留一个值，避免每次重组都重新创建对象
 
-            val isOffline by appState.isOffline.collectAsStateWithLifecycle()
-
+            val isOffline by appState.isOffline.collectAsStateWithLifecycle()//collectAsStateWithLifecycle()它用于将 Kotlin Flow 或 StateFlow 发出的数据作为 Compose 状态收集
+                                                                            //它只在 Composable 处于活动状态（started 或 resumed）时收集数据，并在 Composable 停止时暂停收集，优化了资源使用。
             // If user is not connected to the internet show a snack bar to inform them.
-            val notConnectedMessage = stringResource(R.string.not_connected)
+            val notConnectedMessage = stringResource(R.string.not_connected)//Compose 中获取 Android 资源文件 strings.xml 中定义的字符串的方法。
+            /*••用于在 Composable 函数的生命周期内执行副作用 (Side Effect)，例如启动协程、发送网络请求、显示 Snackbar 等。
+            •它接受一个或多个 key 参数。当 key 的值发生变化时，LaunchedEffect 会取消当前的协程并重新启动一个新的协程。
+            如果 key 保持不变，协程会继续运行直到 Composable 退出组合树。
+            •这里的 key 是 isOffline，意味着当 isOffline 状态改变时，会重新评估并可能显示 Snackbar。*/
             LaunchedEffect(isOffline) {
                 if (isOffline) {
                     snackbarHostState.showSnackbar(
@@ -110,7 +114,7 @@ fun NiaApp(
                 }
             }
 
-            NiaApp(
+            NiaApp(//实际构建应用程序骨架的函数，包括 Scaffold、NiaNavigationSuiteScaffold、TopAppBar、Snackbar 和 NiaNavHost
                 appState = appState,
                 snackbarHostState = snackbarHostState,
                 showSettingsDialog = showSettingsDialog,
@@ -123,11 +127,11 @@ fun NiaApp(
 }
 
 @Composable
-@OptIn(
+@OptIn(//用于标记使用了实验性 API 的代码块。Google 会将一些功能标记为实验性，表示它们可能在未来的版本中发生变化。使用 @OptIn 是一种明确的选择，表示开发者知晓其风险
     ExperimentalMaterial3Api::class,
     ExperimentalComposeUiApi::class,
 )
-internal fun NiaApp(
+internal fun NiaApp(//internal fun ...:只能在当前模块内部访问（在这里是 app 模块）
     appState: NiaAppState,
     snackbarHostState: SnackbarHostState,
     showSettingsDialog: Boolean,
@@ -141,11 +145,13 @@ internal fun NiaApp(
     val currentDestination = appState.currentDestination
 
     if (showSettingsDialog) {
-        SettingsDialog(
+        SettingsDialog(//一个自定义的对话框 Composable，用于显示应用程序的设置界面
             onDismiss = { onSettingsDismissed() },
         )
     }
-
+/*这是一个自定义的自适应导航组件，它结合了 Material 3 的 adaptive 库
+* navigationSuiteItems = { ... }: 接受一个 NavigationSuiteScope 的 lambda，用于定义导航项（可能根据屏幕大小自动切换 NavigationBar、NavigationRail 或 PermanentNavigationDrawer）
+* windowAdaptiveInfo: 用于获取当前窗口的自适应信息（如窗口宽度类别），以便组件可以根据不同的屏幕尺寸和布局做出响应。 */
     NiaNavigationSuiteScaffold(
         navigationSuiteItems = {
             appState.topLevelDestinations.forEach { destination ->
@@ -154,7 +160,7 @@ internal fun NiaApp(
                     .isRouteInHierarchy(destination.baseRoute)
                 item(
                     selected = selected,
-                    onClick = { appState.navigateToTopLevelDestination(destination) },
+                    onClick = { appState.navigateToTopLevelDestination(destination) },//Lambda 表达式：一种匿名函数，通常用花括号 { } 包裹，用于传递代码块作为参数
                     icon = {
                         Icon(
                             imageVector = destination.unselectedIcon,
@@ -176,6 +182,10 @@ internal fun NiaApp(
         },
         windowAdaptiveInfo = windowAdaptiveInfo,
     ) {
+        /*•Scaffold 是 Material Design 中一个非常重要的布局组件，它提供了一个标准的布局结构，
+        可以轻松地添加 TopAppBar、BottomAppBar、FloatingActionButton、Snackbar 等。
+        •contentWindowInsets = WindowInsets(0, 0, 0, 0): 禁用 Scaffold 默认的窗口边距处理，通常是为了更精细地手动控制。
+        •snackbarHost = { SnackbarHost(...) }: 指定用于显示 Snackbar 的主机。*/
         Scaffold(
             modifier = modifier.semantics {
                 testTagsAsResourceId = true
@@ -194,7 +204,7 @@ internal fun NiaApp(
                 )
             },
         ) { padding ->
-            Column(
+            Column(//Jetpack Compose 中最基本的布局容器 Column: 元素垂直排列
                 Modifier
                     .fillMaxSize()
                     .padding(padding)
@@ -211,9 +221,9 @@ internal fun NiaApp(
 
                 if (destination != null) {
                     shouldShowTopAppBar = true
-                    NiaTopAppBar(
-                        titleRes = destination.titleTextId,
-                        navigationIcon = NiaIcons.Search,
+                    NiaTopAppBar(//这是自定义的顶部应用栏，可能封装了 Material 3 的 TopAppBar 或 CenterAlignedTopAppBar，并添加了 Now in Android 特定的样式和行为。
+                        titleRes = destination.titleTextId,// 接受字符串资源 ID 作为标题。
+                        navigationIcon = NiaIcons.Search,//用于顶部栏的图标
                         navigationIconContentDescription = stringResource(
                             id = settingsR.string.feature_settings_top_app_bar_navigation_icon_description,
                         ),
@@ -224,12 +234,12 @@ internal fun NiaApp(
                         colors = TopAppBarDefaults.topAppBarColors(
                             containerColor = Color.Transparent,
                         ),
-                        onActionClick = { onTopAppBarActionClick() },
+                        onActionClick = { onTopAppBarActionClick() },// 回调函数，处理图标点击事件
                         onNavigationClick = { appState.navigateToSearch() },
                     )
                 }
 
-                Box(
+                Box(//Jetpack Compose 中最基本的布局容器 Box: 元素可以堆叠在彼此之上
                     // Workaround for https://issuetracker.google.com/338478720
                     modifier = Modifier.consumeWindowInsets(
                         if (shouldShowTopAppBar) {
@@ -239,9 +249,9 @@ internal fun NiaApp(
                         },
                     ),
                 ) {
-                    NiaNavHost(
+                    NiaNavHost(//这是自定义的导航宿主。它通常是 androidx.navigation.compose.NavHost 的一个封装，负责定义应用程序的导航图，并显示当前导航目标对应的 Composable。
                         appState = appState,
-                        onShowSnackbar = { message, action ->
+                        onShowSnackbar = { message, action ->//onShowSnackbar: 作为参数传递给 NiaNavHost 的回调函数，允许内部的导航目标（屏幕）请求显示 Snackbar。
                             snackbarHostState.showSnackbar(
                                 message = message,
                                 actionLabel = action,
@@ -257,8 +267,8 @@ internal fun NiaApp(
         }
     }
 }
-
-private fun Modifier.notificationDot(): Modifier =
+//扩展函数 (Extension Functions) 允许你在不修改现有类源代码的情况下，为其添加新的函数
+private fun Modifier.notificationDot(): Modifier =//private fun ...: 只能在当前文件内部访问
     composed {
         val tertiaryColor = MaterialTheme.colorScheme.tertiary
         drawWithContent {
@@ -277,7 +287,7 @@ private fun Modifier.notificationDot(): Modifier =
         }
     }
 
-private fun NavDestination?.isRouteInHierarchy(route: KClass<*>) =
+private fun NavDestination?.isRouteInHierarchy(route: KClass<*>) =//KClass<*>:代表一个 Kotlin 类类型。* 是星投影，表示任何类型参数。这里用于泛型地表示一个类的类型，通常用于反射或与路由系统结合，以类的类型作为路由标识。
     this?.hierarchy?.any {
         it.hasRoute(route)
     } ?: false

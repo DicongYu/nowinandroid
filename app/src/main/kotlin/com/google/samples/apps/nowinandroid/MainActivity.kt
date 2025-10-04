@@ -51,8 +51,8 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 import javax.inject.Inject
-
-@AndroidEntryPoint
+//该文件定义了应用的主屏幕结构
+@AndroidEntryPoint//表明该Active依靠Hilt来注入依赖（如ViewModel)
 class MainActivity : ComponentActivity() {
 
     /**
@@ -132,8 +132,8 @@ class MainActivity : ComponentActivity() {
         // the UI.
         splashScreen.setKeepOnScreenCondition { viewModel.uiState.value.shouldKeepSplashScreen() }
 
-        setContent {
-            val appState = rememberNiaAppState(
+        setContent {//setContent()定义了整个应用的根Jetpack Compose界面
+            val appState = rememberNiaAppState(//这是一个自定义的 AppState 类,它持有所有导航和顶层状态（如当前屏幕、是否显示 Bottom Bar 等）
                 networkMonitor = networkMonitor,
                 userNewsResourceRepository = userNewsResourceRepository,
                 timeZoneMonitor = timeZoneMonitor,
@@ -145,12 +145,12 @@ class MainActivity : ComponentActivity() {
                 LocalAnalyticsHelper provides analyticsHelper,
                 LocalTimeZone provides currentTimeZone,
             ) {
-                NiaTheme(
+                NiaTheme(//组件风格
                     darkTheme = themeSettings.darkTheme,
                     androidTheme = themeSettings.androidTheme,
                     disableDynamicTheming = themeSettings.disableDynamicTheming,
                 ) {
-                    NiaApp(appState)
+                    NiaApp(appState)//大组件
                 }
             }
         }
